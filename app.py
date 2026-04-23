@@ -24,8 +24,8 @@ conn.commit()
 @app.route("/login", methods=["GET","POST"])
 def login():
     if request.method == "POST":
-        u = request.form["username"]
-        p = request.form["password"]
+        u = request.form["Rakesh"]
+        p = request.form["Rakesh999"]
 
         user = db().execute("SELECT * FROM users WHERE username=? AND password=?", (u,p)).fetchone()
 
