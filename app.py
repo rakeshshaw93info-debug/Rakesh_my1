@@ -1,96 +1,66 @@
-from flask import Flask, request, redirect
-import sqlite3, os
+from flask import Flask, render_template, redirect, request, session
+import sqlite3
 
 app = Flask(__name__)
-
-UPLOAD_FOLDER = "/tmp/uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.secret_key = "629102"
 
 def db():
-    return sqlite3.connect("data.db")
+    conn = sqlite3.connect("data.db")
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# create table
+# CREATE USERS TABLE
 conn = db()
-conn.execute("""CREATE TABLE IF NOT EXISTS data (
+conn.execute("""
+CREATE TABLE IF NOT EXISTS users (
 id INTEGER PRIMARY KEY,
-com TEXT,
-brand TEXT,
-mrp TEXT,
-pre TEXT,
-ptr TEXT,
-length TEXT,
-sticks TEXT,
-market TEXT,
-image TEXT
-)""")
+username TEXT,
+password TEXT,
+pin TEXT
+)
+""")
 conn.commit()
+
+@app.route("/login", methods=["GET","POST"])
+def login():
+    if request.method == "POST":
+        u = request.form["username"]
+        p = request.form["password"]
+
+        user = db().execute("SELECT * FROM users WHERE username=? AND password=?", (u,p)).fetchone()
+
+        if user:
+            session["user"] = u
+            return redirect("/dashboard")
+
+    return render_template("login.html")
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
+
+@app.route("/users", methods=["GET","POST"])
+def users():
+    conn = db()
+
+    if request.method == "POST":
+        conn.execute("INSERT INTO users (username,password,pin) VALUES (?,?,?)",
+                     (request.form["username"], request.form["password"], request.form["pin"]))
+        conn.commit()
+
+    data = conn.execute("SELECT * FROM users").fetchall()
+    return render_template("users.html", users=data)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
 
 @app.route("/")
 def home():
-    return """
-    <h2>Admin Panel</h2>
-    <form method='POST' action='/add' enctype='multipart/form-data'>
-    COM:<input name='com'><br>
-    BRAND:<input name='brand'><br>
-    MRP:<input name='mrp'><br>
-    PRE STICK PRICE:<input name='pre'><br>
-    PTR:<input name='ptr'><br>
-    CIG LENGTH:<input name='length'><br>
-    NUMBER OF STICKS:<input name='sticks'><br>
-    MARKET:<input name='market'><br>
-    IMAGE:<input type='file' name='image'><br>
-    <button>Add</button>
-    </form>
-    <br><a href='/view'>View Data</a>
-    """
-
-@app.route("/add", methods=["POST"])
-def add():
-    file = request.files["image"]
-    filename = file.filename
-    path = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(path)
-
-    conn = db()
-    conn.execute("""INSERT INTO data 
-    (com,brand,mrp,pre,ptr,length,sticks,market,image)
-    VALUES (?,?,?,?,?,?,?,?,?)""",
-    (
-        request.form["com"],
-        request.form["brand"],
-        request.form["mrp"],
-        request.form["pre"],
-        request.form["ptr"],
-        request.form["length"],
-        request.form["sticks"],
-        request.form["market"],
-        filename
-    ))
-    conn.commit()
-
-    return "Data Added ✅ <br><a href='/'>Back</a>"
-
-@app.route("/view")
-def view():
-    conn = db()
-    data = conn.execute("SELECT * FROM data").fetchall()
-
-    html = "<h2>Data List</h2>"
-    for d in data:
-        html += f"""
-        <hr>
-        COM: {d[1]}<br>
-        BRAND: {d[2]}<br>
-        MRP: {d[3]}<br>
-        PRE: {d[4]}<br>
-        PTR: {d[5]}<br>
-        LENGTH: {d[6]}<br>
-        STICKS: {d[7]}<br>
-        MARKET: {d[8]}<br>
-        IMAGE: {d[9]}<br>
-        """
-    return html
+    return "Admin Panel Running"
 
 if __name__ == "__main__":
+    import os
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
