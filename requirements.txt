@@ -1,0 +1,7 @@
+flask
+gunicorn
+python-telegram-bot
+pandas
+openpyxl
+python-pptx
+werkzeug
