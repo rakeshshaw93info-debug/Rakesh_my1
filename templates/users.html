@@ -1,0 +1,14 @@
+<h2>User Management</h2>
+
+<form method="POST">
+Username: <input name="username"><br>
+Password: <input name="password"><br>
+PIN: <input name="pin"><br>
+<button>Create User</button>
+</form>
+
+<hr>
+
+{% for u in users %}
+<p>{{u["username"]}} - PIN: {{u["pin"]}}</p>
+{% endfor %}
